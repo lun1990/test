@@ -1,0 +1,238 @@
+//============================================================================
+// Name        : RBTree.cpp
+// Author      : lun
+// Version     :
+// Copyright   : Your copyright notice
+// Description : Hello World in C++, Ansi-style
+//============================================================================
+
+#include <iostream>
+#include <ctime>
+#include <cstdlib>
+using namespace std;
+
+static bool RED = 0;
+static bool BLACK = 1;
+
+template<typename Type>
+struct RBNode
+{
+	Type key;
+	bool color;
+	RBNode<Type>* left;
+	RBNode<Type>* right;
+	RBNode<Type>* parent;
+
+	RBNode(Type k = Type(), bool c = RED, RBNode<Type>* l = NULL,
+			RBNode<Type>* r = NULL, RBNode<Type>* p =NULL):
+				key(k), color(c), left(l), right(r), parent(p) {}
+};
+
+template<typename Type>
+class RBTree{
+private:
+	static RBNode<Type> *nil;
+	RBNode<Type> *root;
+
+	void rotate_left(RBNode<Type> *x)
+	{
+		RBNode<Type>* p = x->parent;
+		if (p == nil)
+			return;
+		RBNode<Type>* g = p->parent;
+		p->left = x->right;
+		x->right->parent = p;
+		x->right = p;
+		p->parent = x;
+
+		x->parent = g;
+		if (g != nil)
+		{
+			if (g->left == p)
+				g->left = x;
+			else
+				g->right = x;
+		}
+	}
+
+	void rotate_right(RBNode<Type> *x)
+	{
+		RBNode<Type>* p = x->parent;
+		if (p == nil)
+			return;
+		RBNode<Type>* g = p->parent;
+		p->right = x->left;
+		x->left->parent = p;
+		x->left = p;
+		p->parent = x;
+
+		x->parent = g;
+		if (g != nil)
+		{
+			if (g->left == p)
+				g->left = x;
+			else
+				g->right = x;
+		}
+	}
+public:
+	RBTree():root(nil){}
+
+	inline RBNode<Type> *& uncle(RBNode<Type> *x)
+			{
+		if (x->parent->parent->left == x->parent)
+			return x->parent->parent->right;
+		else
+			return x->parent->parent->left;
+			}
+	void refix(RBNode<Type> *x){
+		if (x == nil)
+			return;
+		if (x->parent == nil)
+			x->color = BLACK;
+		if (x->color == BLACK)
+			return;
+		if (x->parent->parent == nil)
+			x->parent->color = BLACK;
+		if (x->parent->color == BLACK)
+			return;
+
+		RBNode<Type> *pUncle = uncle(x);
+		if (pUncle->color == RED)
+		{
+			x->parent->color = BLACK;
+			pUncle->color = BLACK;
+			x->parent->parent->color = RED;
+			return;
+		}
+		else
+		{
+			if (x->key < x->parent->key)
+			{
+				if (x->parent->key < x->parent->parent->key)
+				{
+					//右旋 x->parent->parent
+					rotate_right(x->parent);
+					x->parent->color = BLACK;
+					x->parent->right->color = RED;
+				}
+				else
+				{
+					//右旋 x->parent
+					rotate_right(x);
+					//左旋 x->parent->parent
+					rotate_left(x);
+					x->color = BLACK;
+					x->right->color = RED;
+				}
+			}
+			else
+			{
+				if (x->parent->key < x->parent->parent->key)
+				{
+					//左旋 x->parent
+					rotate_left(x);
+					//右旋 x->parent->parent
+					rotate_right(x);
+					x->color = BLACK;
+					x->left->color = RED;
+				}
+				else
+				{
+					//左旋 x->parent->parent
+					rotate_left(x->parent);
+					x->parent->color = BLACK;
+					x->parent->left->color = RED;
+				}
+			}
+		}
+	}
+    void insert(RBNode<Type> *&x, const Type &v)
+    {
+    	if (x == nil)
+    	{
+    		x = new RBNode<Type>(v, RED, nil, nil, nil);
+    		refix(x);
+    	}
+    	else if (v < x->key)
+    		insert(x->left, v);
+    	else if (v > x->key)
+    		insert(x->right, v);
+    }
+
+    void insert(const Type &v)
+    {
+    	insert(root, v);
+    	root->color = BLACK;
+    }
+
+    int black_count(RBNode<Type> *x)
+    {
+    	if (x == nil)
+    		return 0;
+    	int lCount = black_count(x->left);
+    	int rCount = black_count(x->right);
+
+    	int larger = lCount > rCount ? lCount : rCount;
+    	if (x->color == BLACK)
+    		return larger + 1;
+    	else
+    		return larger;
+    }
+
+    bool check(RBNode<Type> *x)
+    {
+    	if (x == nil)
+    		return true;
+    	if  (!check(x->left))
+    		return false;
+    	if (!check(x->right))
+    		return false;
+    	if (black_count(x->left) != black_count(x->right))
+    		return false;
+    	return true;
+    }
+
+    bool check()
+    {
+    	return check(root);
+    }
+
+    void printTree(RBNode<Type> *x)
+    {
+    	if (x == nil)
+    		return;
+    	printTree(x->left);
+    	cout<<x->key<<"  ";
+    	if (x->color == BLACK)
+    		cout<<"BLACK"<<endl;
+    	else
+    		cout<<"RED"<<endl;
+    	printTree(x->right);
+    }
+
+    void printTree()
+    {
+    	printTree(root);
+    }
+};
+
+template<typename Type>
+RBNode<Type>* RBTree<Type>::nil = new RBNode<Type>(Type(), BLACK, nil, nil, nil);
+
+int main() {
+	cout << "!!!Hello World!!!" << endl; // prints !!!Hello World!!!
+	RBTree<int> rbt;
+	srand(time(NULL));
+	int n = 100;
+	while((n--) > 0)
+	{
+		rbt.insert(rand());
+	}
+	rbt.printTree();
+	if (rbt.check())
+		cout<< "yes" << endl;
+	else
+		cout<< "no" << endl;
+	return 0;
+}
